@@ -1,0 +1,23 @@
+---
+- name: Load config file for migration transform
+  ansible.builtin.slurp:
+    src: "{{ caac_config_file.path }}"
+  register: caac_transform_slurp
+
+- name: Parse config YAML
+  ansible.builtin.set_fact:
+    caac_transform_doc: "{{ caac_transform_slurp.content | b64decode | from_yaml }}"
+
+- name: Transform each top-level variable in config file
+  ansible.builtin.include_tasks: migration_transform_var.yml
+  loop: "{{ caac_transform_doc.keys() | list }}"
+  loop_control:
+    loop_var: caac_transform_key
+
+- name: Write transformed config file
+  ansible.builtin.copy:
+    dest: "{{ caac_config_file.path }}"
+    mode: "0644"
+    content: |
+      ---
+      {{ caac_transform_doc | to_nice_yaml(indent=2, width=120) }}

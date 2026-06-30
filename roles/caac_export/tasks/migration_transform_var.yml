@@ -1,0 +1,47 @@
+---
+- name: Resolve dispatch variable name for migration
+  ansible.builtin.set_fact:
+    caac_transform_dispatch_key: "{{ caac_var_key_renames[caac_transform_key] | default(caac_transform_key) }}"
+    caac_transform_value: "{{ caac_transform_doc[caac_transform_key] }}"
+
+- name: Detect list-valued configuration for per-object transforms
+  ansible.builtin.set_fact:
+    caac_transform_is_object_list: >-
+      {{
+        (caac_transform_value is sequence)
+        and (caac_transform_value is not string)
+        and (caac_transform_value is not mapping)
+      }}
+
+- name: Initialize transformed object list
+  ansible.builtin.set_fact:
+    caac_transformed_list: []
+  when: caac_transform_is_object_list | bool
+
+- name: Transform each configuration object
+  ansible.builtin.include_tasks: migration_transform_object.yml
+  loop: "{{ caac_transform_value if (caac_transform_is_object_list | bool) else [] }}"
+  loop_control:
+    loop_var: caac_object_item
+  when: caac_transform_is_object_list | bool
+
+- name: Store transformed list
+  ansible.builtin.set_fact:
+    caac_transform_value: "{{ caac_transformed_list }}"
+  when: caac_transform_is_object_list | bool
+
+- name: Update document with transformed configuration
+  ansible.builtin.set_fact:
+    caac_transform_doc: >-
+      {{
+        (caac_transform_doc | combine({caac_transform_dispatch_key: caac_transform_value}))
+        | dict2items
+        | rejectattr('key', 'equalto', caac_transform_key)
+        | items2dict
+      }}
+  when: caac_transform_dispatch_key != caac_transform_key
+
+- name: Update document in place when key unchanged
+  ansible.builtin.set_fact:
+    caac_transform_doc: "{{ caac_transform_doc | combine({caac_transform_dispatch_key: caac_transform_value}) }}"
+  when: caac_transform_dispatch_key == caac_transform_key

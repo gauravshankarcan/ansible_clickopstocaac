@@ -1,0 +1,71 @@
+---
+- name: Find exported YAML files
+  ansible.builtin.find:
+    paths: "{{ caac_output_dir }}/.raw_export"
+    patterns:
+      - "*.yaml"
+      - "*.yml"
+    recurse: true
+  register: caac_raw_files
+
+- name: Initialize merged config accumulator
+  ansible.builtin.set_fact:
+    caac_merged_configs: {}
+
+- name: Process each exported file into dispatch-ready configs
+  ansible.builtin.include_tasks: post_process_file.yml
+  loop: "{{ caac_raw_files.files | default([]) }}"
+  loop_control:
+    loop_var: caac_raw_file
+    label: "{{ caac_raw_file.path | basename }}"
+  when:
+    - caac_raw_files.matched | default(0) | int > 0
+    - not (caac_raw_file.path | basename is match('(?i)^hub_'))
+
+- name: Deduplicate list-type configs by object name
+  ansible.builtin.set_fact:
+    caac_merged_configs: >-
+      {{
+        caac_merged_configs | combine({
+          item: (
+            caac_merged_configs[item]
+            | unique(attribute='name', case_sensitive=True)
+          )
+        }, recursive=true)
+      }}
+  loop: "{{ caac_merged_configs.keys() | list }}"
+  when:
+    - caac_merged_configs[item] is iterable
+    - caac_merged_configs[item] is not string
+    - caac_merged_configs[item] is not mapping
+    - caac_merged_configs[item] | length > 0
+    - caac_merged_configs[item][0].name is defined
+
+- name: Write merged config files to configs directory
+  ansible.builtin.copy:
+    dest: "{{ caac_output_dir }}/configs/{{ item.key }}.yml"
+    mode: "0644"
+    content: |
+      ---
+      {{ {item.key: item.value} | to_nice_yaml(indent=2, width=120) }}
+  loop: "{{ caac_merged_configs | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}.yml"
+  when: caac_merged_configs | length > 0
+
+- name: Count generated config files
+  ansible.builtin.set_fact:
+    caac_config_file_count: "{{ caac_merged_configs | length }}"
+
+- name: Search for ToDo markers in generated configs
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep -r "ToDo:" "{{ caac_output_dir }}/configs" 2>/dev/null | cut -d: -f1 | sort -u || true
+  args:
+    executable: /bin/bash
+  register: caac_todo_files
+  changed_when: false
+
+- name: Record ToDo marker files
+  ansible.builtin.set_fact:
+    caac_todo_file_list: "{{ caac_todo_files.stdout_lines | default([]) | map('basename') | list }}"

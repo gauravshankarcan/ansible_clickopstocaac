@@ -1,0 +1,58 @@
+---
+- name: Apply AAP configuration from extracted config-as-code
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+{% raw %}
+    aap_hostname: >-
+      {{
+        lookup('env', 'TARGET_AAP_URL')
+        | default(lookup('env', 'AAP_URL'), true)
+        | default(lookup('env', 'AAP_BASE'), true)
+        | regex_replace('^https?://', '')
+        | regex_replace('/$', '')
+      }}
+    aap_username: >-
+      {{
+        lookup('env', 'TARGET_AAP_USER')
+        | default(lookup('env', 'AAP_USER'), true)
+        | default(lookup('env', 'CONTROLLER_USERNAME'), true)
+      }}
+    aap_password: >-
+      {{
+        lookup('env', 'TARGET_AAP_PASS')
+        | default(lookup('env', 'AAP_PASS'), true)
+        | default(lookup('env', 'CONTROLLER_PASSWORD'), true)
+      }}
+    aap_token: >-
+      {{
+        lookup('env', 'TARGET_AAP_TOKEN')
+        | default(lookup('env', 'AAP_TOKEN'), true)
+        | default('', true)
+      }}
+    aap_validate_certs: "{{ lookup('env', 'TARGET_AAP_VALIDATE_CERTS') | default(lookup('env', 'AAP_VALIDATE_CERTS'), true) | default('false', true) | bool }}"
+{% endraw %}
+    aap_configuration_async_retries: 120
+    aap_configuration_projects_async_delay: 3
+    aap_configuration_dispatcher_exclude_roles:
+{% for role in caac_apply_exclude_roles | default([]) %}
+      - {{ role }}
+{% endfor %}
+  tasks:
+    - name: Load object configuration
+      ansible.builtin.include_vars:
+        dir: configs
+        extensions:
+          - yml
+          - yaml
+        ignore_files:
+          - connection.yml
+      tags:
+        - always
+
+    - name: Apply configuration via infra.aap_configuration dispatch
+      ansible.builtin.import_role:
+        name: infra.aap_configuration.dispatch
+      tags:
+        - always

@@ -1,0 +1,59 @@
+---
+- name: Use provided token from environment
+  ansible.builtin.set_fact:
+    caac_api_token: "{{ aap_token }}"
+    caac_token_is_env: true
+  when:
+    - aap_token | length > 0
+    - caac_api_token is not defined
+
+- name: Obtain token from Gateway API
+  when:
+    - caac_api_token is not defined
+    - caac_auth_mode == 'gateway_oauth'
+  no_log: true
+  block:
+    - name: Request gateway authentication token
+      ansible.builtin.uri:
+        url: "https://{{ aap_hostname }}{{ caac_token_path }}"
+        user: "{{ aap_username }}"
+        password: "{{ aap_password }}"
+        method: POST
+        force_basic_auth: true
+        validate_certs: "{{ aap_validate_certs }}"
+        status_code: 201
+      register: caac_authtoken_res
+
+    - name: Store gateway OAuth token
+      ansible.builtin.set_fact:
+        caac_api_token: "{{ caac_authtoken_res.json.token }}"
+        caac_token_url: "{{ caac_authtoken_res.json.url }}"
+        caac_token_is_env: false
+
+- name: Obtain token from Controller API v2
+  when:
+    - caac_api_token is not defined
+    - caac_auth_mode == 'controller_v2'
+  no_log: true
+  block:
+    - name: Request controller v2 authentication token
+      ansible.builtin.uri:
+        url: "https://{{ aap_hostname }}{{ caac_token_path }}"
+        user: "{{ aap_username }}"
+        password: "{{ aap_password }}"
+        method: POST
+        force_basic_auth: true
+        validate_certs: "{{ aap_validate_certs }}"
+        status_code: 201
+      register: caac_authtoken_res
+
+    - name: Store controller OAuth token
+      ansible.builtin.set_fact:
+        caac_api_token: "{{ caac_authtoken_res.json.token }}"
+        caac_token_url: "{{ caac_authtoken_res.json.url }}"
+        caac_token_is_env: false
+
+- name: Publish token aliases for extract roles
+  ansible.builtin.set_fact:
+    aap_oauthtoken: "{{ caac_api_token }}"
+    controller_oauthtoken: "{{ caac_api_token }}"

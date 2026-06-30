@@ -1,0 +1,60 @@
+---
+- name: Parse comma-separated extract filters
+  ansible.builtin.set_fact:
+    caac_filter_list: "{{ extract_filter | string | lower | split(',') | map('trim') | list }}"
+
+- name: Select filter map for source platform
+  ansible.builtin.set_fact:
+    caac_active_filter_map: "{{ caac_filter_map_legacy if caac_use_legacy_filters else caac_filter_map }}"
+
+- name: Reject EDA-only filters on pre-EDA source platforms
+  ansible.builtin.assert:
+    that:
+      - filter_item not in ['eda', 'eda_projects', 'eda_rulebooks', 'eda_credentials', 'eda_event_streams', 'eda_decision_environments']
+    fail_msg: >-
+      Filter '{{ filter_item }}' requires an EDA-capable source (aap25+). Current source: {{ caac_source_platform_resolved }}.
+  loop: "{{ caac_filter_list }}"
+  loop_control:
+    loop_var: filter_item
+  when: not caac_source_include_eda
+
+- name: Reject gateway-only filters on legacy source platforms
+  ansible.builtin.assert:
+    that:
+      - filter_item not in ['gateway_services', 'authenticators', 'admin']
+    fail_msg: >-
+      Filter '{{ filter_item }}' requires gateway API (aap25+). Use --filter organizations,users,teams on AWX/AAP 2.4.
+  loop: "{{ caac_filter_list }}"
+  loop_control:
+    loop_var: filter_item
+  when: not caac_source_include_gateway
+
+- name: Validate extract filter names
+  ansible.builtin.assert:
+    that:
+      - filter_item in caac_active_filter_map
+    fail_msg: >-
+      Unknown filter '{{ filter_item }}'. Valid filters: {{ caac_active_filter_map.keys() | sort | join(', ') }}
+  loop: "{{ caac_filter_list }}"
+  loop_control:
+    loop_var: filter_item
+
+- name: Build resolved input_tag list from filters
+  ansible.builtin.set_fact:
+    resolved_input_tags: "{{ resolved_input_tags | default([]) + caac_active_filter_map[item] }}"
+  loop: "{{ caac_filter_list }}"
+
+- name: Deduplicate resolved input tags
+  ansible.builtin.set_fact:
+    resolved_input_tags: "{{ resolved_input_tags | unique | list }}"
+
+- name: Reject empty filter resolution
+  ansible.builtin.assert:
+    that:
+      - resolved_input_tags | length > 0
+    fail_msg: >-
+      No export tags resolved for filter '{{ extract_filter }}' on platform {{ caac_source_platform_resolved }}.
+
+- name: Show resolved input tags
+  ansible.builtin.debug:
+    var: resolved_input_tags

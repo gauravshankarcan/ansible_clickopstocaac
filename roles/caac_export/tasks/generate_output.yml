@@ -1,0 +1,48 @@
+---
+- name: Render connection vars for apply playbook
+  ansible.builtin.template:
+    src: connection.yml.j2
+    dest: "{{ caac_output_dir }}/configs/connection.yml"
+    mode: "0644"
+
+- name: Render apply playbook
+  ansible.builtin.template:
+    src: apply.yml.j2
+    dest: "{{ caac_output_dir }}/apply.yml"
+    mode: "0644"
+
+- name: Render output requirements.yml
+  ansible.builtin.template:
+    src: requirements.yml.j2
+    dest: "{{ caac_output_dir }}/requirements.yml"
+    mode: "0644"
+
+- name: Render output ansible.cfg
+  ansible.builtin.template:
+    src: ansible.cfg.j2
+    dest: "{{ caac_output_dir }}/ansible.cfg"
+    mode: "0644"
+
+- name: Create output inventory directory
+  ansible.builtin.file:
+    path: "{{ caac_output_dir }}/inventory"
+    state: directory
+    mode: "0755"
+
+- name: Render output inventory
+  ansible.builtin.template:
+    src: inventory_hosts.yml.j2
+    dest: "{{ caac_output_dir }}/inventory/hosts.yml"
+    mode: "0644"
+
+- name: Render extract metadata
+  ansible.builtin.template:
+    src: extract_metadata.yml.j2
+    dest: "{{ caac_output_dir }}/extract_metadata.yml"
+    mode: "0644"
+
+- name: Render output README
+  ansible.builtin.template:
+    src: output_readme.md.j2
+    dest: "{{ caac_output_dir }}/README.md"
+    mode: "0644"

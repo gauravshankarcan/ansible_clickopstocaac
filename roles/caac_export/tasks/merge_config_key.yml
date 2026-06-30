@@ -1,0 +1,31 @@
+---
+- name: Resolve target dispatch variable name
+  ansible.builtin.set_fact:
+    caac_target_key: "{{ caac_var_key_renames[caac_config_key] | default(caac_config_key) }}"
+    caac_new_value: "{{ caac_parsed_doc[caac_config_key] }}"
+
+- name: Merge dict-valued configuration (e.g. settings)
+  ansible.builtin.set_fact:
+    caac_merged_configs: >-
+      {{
+        caac_merged_configs | combine({
+          caac_target_key: (
+            caac_merged_configs[caac_target_key] | default({})
+            | combine(caac_new_value)
+          )
+        }, recursive=true)
+      }}
+  when: caac_new_value is mapping
+
+- name: Merge list-valued configuration
+  ansible.builtin.set_fact:
+    caac_merged_configs: >-
+      {{
+        caac_merged_configs | combine({
+          caac_target_key: (
+            (caac_merged_configs[caac_target_key] | default([]))
+            + (caac_new_value if caac_new_value is iterable and caac_new_value is not string else [caac_new_value])
+          )
+        }, recursive=true)
+      }}
+  when: caac_new_value is not mapping

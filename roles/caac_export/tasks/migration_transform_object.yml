@@ -1,0 +1,61 @@
+---
+- name: Strip legacy API metadata fields from object
+  ansible.builtin.set_fact:
+    caac_object_work: >-
+      {{
+        caac_object_item | dict2items
+        | rejectattr('key', 'in', caac_migration_strip_fields)
+        | items2dict
+      }}
+
+- name: Map organization name for target platform
+  ansible.builtin.set_fact:
+    caac_object_work: >-
+      {{
+        caac_object_work | combine({
+          'organization': caac_migration_org_map[caac_object_work.organization] | default(caac_object_work.organization)
+        })
+      }}
+  when:
+    - caac_migration_org_map | length > 0
+    - caac_object_work.organization is defined
+
+- name: Map credential name for target platform
+  ansible.builtin.set_fact:
+    caac_object_work: >-
+      {{
+        caac_object_work | combine({
+          'name': caac_migration_credential_map[caac_object_work.name] | default(caac_object_work.name)
+        })
+      }}
+  when:
+    - caac_migration_credential_map | length > 0
+    - caac_object_work.name is defined
+    - caac_transform_dispatch_key in ['controller_credentials', 'eda_credentials']
+
+- name: Map SCM URL for target platform
+  ansible.builtin.set_fact:
+    caac_object_work: >-
+      {{
+        caac_object_work | combine({
+          'scm_url': caac_migration_scm_url_map[caac_object_work.scm_url] | default(caac_object_work.scm_url)
+        })
+      }}
+  when:
+    - caac_migration_scm_url_map | length > 0
+    - caac_object_work.scm_url is defined
+
+- name: Apply default execution environment to job templates
+  ansible.builtin.set_fact:
+    caac_object_work: >-
+      {{
+        caac_object_work | combine({'execution_environment': caac_migration_default_ee})
+      }}
+  when:
+    - caac_migration_default_ee | length > 0
+    - caac_transform_dispatch_key == 'controller_templates'
+    - caac_object_work.execution_environment is not defined
+
+- name: Append transformed object to result list
+  ansible.builtin.set_fact:
+    caac_transformed_list: "{{ caac_transformed_list + [caac_object_work] }}"

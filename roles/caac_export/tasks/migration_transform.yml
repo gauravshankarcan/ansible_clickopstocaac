@@ -1,0 +1,28 @@
+---
+- name: Skip migration transform when disabled
+  ansible.builtin.debug:
+    msg: "Migration transforms skipped"
+  when:
+    - not (caac_migration_mode | bool)
+    - not (caac_migration_format_for_gateway | bool)
+
+- name: Apply migration transforms to config files
+  when: (caac_migration_mode | bool) or (caac_migration_format_for_gateway | bool)
+  block:
+    - name: Find config files to transform
+      ansible.builtin.find:
+        paths: "{{ caac_output_dir }}/configs"
+        patterns:
+          - "*.yml"
+          - "*.yaml"
+      register: caac_config_files
+
+    - name: Transform each config file
+      ansible.builtin.include_tasks: migration_transform_file.yml
+      loop: "{{ caac_config_files.files | default([]) }}"
+      loop_control:
+        loop_var: caac_config_file
+        label: "{{ caac_config_file.path | basename }}"
+      when:
+        - caac_config_files.matched | default(0) | int > 0
+        - caac_config_file.path | basename != 'connection.yml'

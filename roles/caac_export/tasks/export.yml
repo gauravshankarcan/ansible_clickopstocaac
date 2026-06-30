@@ -1,0 +1,69 @@
+---
+- name: Export via legacy controller filetree_create
+  when: caac_use_legacy_extractor
+  block:
+    - name: Pre-set legacy collection detection facts
+      ansible.builtin.set_fact:
+        awx_awx_collection_installed: "awx.awx"
+        controller_api_plugin: "{{ caac_api_plugin }}"
+
+    - name: Invoke infra.controller_configuration.filetree_create
+      ansible.builtin.include_role:
+        name: infra.controller_configuration.filetree_create
+      vars:
+        controller_hostname: "{{ aap_hostname }}"
+        controller_username: "{{ aap_username }}"
+        controller_password: "{{ aap_password }}"
+        controller_oauthtoken: "{{ controller_oauthtoken }}"
+        controller_validate_certs: "{{ aap_validate_certs }}"
+        controller_api_plugin: "{{ caac_api_plugin }}"
+        output_path: "{{ caac_output_dir }}/.raw_export"
+        input_tag: "{{ resolved_input_tags }}"
+        flatten_output: "{{ filetree_flatten_output }}"
+        omit_id: "{{ filetree_omit_id }}"
+        skip_inventory_sources: "{{ filetree_skip_inventory_sources }}"
+        skip_inventory_hosts: "{{ filetree_skip_inventory_hosts }}"
+        skip_inventory_groups: "{{ filetree_skip_inventory_groups }}"
+
+- name: Export via AAP 2.5+ extended filetree_create
+  when: not caac_use_legacy_extractor
+  block:
+    - name: Pre-set extended collection detection facts
+      ansible.builtin.set_fact:
+        awx_awx_collection_installed: "awx.awx"
+        controller_api_plugin: awx.awx.controller_api
+
+    - name: Invoke infra.aap_configuration_extended.filetree_create
+      block:
+        - name: Run extended filetree_create role
+          ansible.builtin.include_role:
+            name: infra.aap_configuration_extended.filetree_create
+          vars:
+            output_path: "{{ caac_output_dir }}/.raw_export"
+            input_tag: "{{ resolved_input_tags }}"
+            valid_tags: "{{ filetree_valid_tags }}"
+            flatten_output: "{{ filetree_flatten_output }}"
+            secrets_as_variables: "{{ filetree_secrets_as_variables }}"
+            secrets_as_variables_prefix: "{{ filetree_secrets_prefix }}"
+            omit_id: "{{ filetree_omit_id }}"
+            skip_inventory_sources: "{{ filetree_skip_inventory_sources }}"
+            skip_inventory_hosts: "{{ filetree_skip_inventory_hosts }}"
+            skip_inventory_groups: "{{ filetree_skip_inventory_groups }}"
+      rescue:
+        - name: Log extended export non-fatal errors
+          ansible.builtin.debug:
+            msg: "Extended filetree_create completed with errors; continuing post-process."
+
+- name: Revoke temporary OAuth token
+  ansible.builtin.uri:
+    url: "https://{{ aap_hostname }}{{ caac_token_url }}"
+    user: "{{ aap_username }}"
+    password: "{{ aap_password }}"
+    method: DELETE
+    force_basic_auth: true
+    validate_certs: "{{ aap_validate_certs }}"
+    status_code: 204
+  when:
+    - caac_token_url is defined
+    - not (caac_token_is_env | default(false))
+  no_log: true

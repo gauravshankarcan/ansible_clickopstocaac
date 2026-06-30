@@ -1,0 +1,49 @@
+---
+- name: Process export file
+  block:
+    - name: Load exported YAML content
+      ansible.builtin.slurp:
+        src: "{{ caac_raw_file.path }}"
+      register: caac_slurp
+
+    - name: Normalize exported YAML text
+      ansible.builtin.set_fact:
+        caac_yaml_text: >-
+          {{
+            (caac_slurp.content | b64decode)
+            | regex_replace('(?m)^-\%\}\s*$', '')
+            | regex_replace('(?m)^\.\.\.\s*$', '')
+          }}
+
+    - name: Parse YAML document
+      ansible.builtin.set_fact:
+        caac_parsed_doc: "{{ caac_yaml_text | from_yaml }}"
+      ignore_errors: true
+      register: caac_parse_result
+
+    - name: Copy unparsed file directly when YAML contains Jinja artifacts
+      when: caac_parse_result is failed
+      block:
+        - name: Determine direct copy target filename
+          ansible.builtin.set_fact:
+            caac_direct_copy_name: >-
+              {{
+                caac_file_renames[caac_raw_file.path | basename]
+                | default((caac_raw_file.path | basename | regex_replace('\\.ya?ml$', '.yml')))
+              }}
+
+        - name: Write sanitized YAML to configs directory
+          ansible.builtin.copy:
+            dest: "{{ caac_output_dir }}/configs/{{ caac_direct_copy_name }}"
+            mode: "0644"
+            content: "{{ caac_yaml_text }}"
+
+    - name: Merge each top-level key from parsed document
+      ansible.builtin.include_tasks: merge_config_key.yml
+      loop: "{{ caac_parsed_doc.keys() | list }}"
+      loop_control:
+        loop_var: caac_config_key
+      when:
+        - caac_parse_result is not failed
+        - caac_parsed_doc is mapping
+        - caac_config_key != '...'

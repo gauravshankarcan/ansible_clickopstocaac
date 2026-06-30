@@ -1,0 +1,22 @@
+---
+extracted_at: "{{ ansible_date_time.iso8601 }}"
+source_aap_hostname: "{{ aap_hostname }}"
+source_platform: "{{ caac_source_platform_resolved }}"
+target_platform: "{{ caac_target_platform }}"
+migration_mode: {{ caac_migration_mode | bool | lower }}
+extractor_role: "{{ caac_extractor_role }}"
+auth_mode: "{{ caac_auth_mode }}"
+api_plugin: "{{ caac_api_plugin }}"
+extract_filter: "{{ extract_filter }}"
+resolved_input_tags: {{ resolved_input_tags | to_json }}
+organization_filter: "{{ organization_filter | default('') }}"
+config_file_count: {{ caac_config_file_count | default(0) }}
+todo_files: {{ caac_todo_file_list | default([]) | to_json }}
+apply_exclude_roles: {{ caac_apply_exclude_roles | default([]) | to_json }}
+migration:
+  remap_legacy_vars: {{ caac_migration_remap_legacy_vars | bool | lower }}
+  format_for_gateway: {{ caac_migration_format_for_gateway | bool | lower }}
+  default_ee: "{{ caac_migration_default_ee }}"
+  org_map: {{ caac_migration_org_map | to_json }}
+  credential_map: {{ caac_migration_credential_map | to_json }}
+  scm_url_map: {{ caac_migration_scm_url_map | to_json }}

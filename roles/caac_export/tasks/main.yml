@@ -1,0 +1,71 @@
+---
+- name: Validate source connection settings
+  ansible.builtin.assert:
+    that:
+      - aap_hostname | length > 0
+      - (aap_token | length > 0) or ((aap_username | length > 0) and (aap_password | length > 0))
+    fail_msg: >-
+      Set SOURCE_AAP_URL or AAP_URL/AAP_BASE plus SOURCE_AAP_TOKEN or SOURCE_AAP_USER/SOURCE_AAP_PASS
+      (e.g. source ~/.bashrc_eda_session).
+
+- name: Resolve source platform profile
+  ansible.builtin.include_tasks: resolve_source_platform.yml
+
+- name: Gather date/time facts for output directory name
+  ansible.builtin.setup:
+    gather_subset:
+      - date_time
+
+- name: Set output directory path
+  ansible.builtin.set_fact:
+    caac_output_dir: >-
+      {{ caac_output_base }}/caac_{{ ansible_date_time.date | replace('-', '') }}_{{
+      ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second }}
+
+- name: Create output directory structure
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ caac_output_dir }}"
+    - "{{ caac_output_dir }}/configs"
+    - "{{ caac_output_dir }}/.raw_export"
+
+- name: Resolve extract filter to filetree_create input tags
+  ansible.builtin.include_tasks: resolve_filter.yml
+
+- name: Authenticate to source API
+  ansible.builtin.include_tasks: authenticate.yml
+
+- name: Export objects from source platform
+  block:
+    - name: Run platform-specific export
+      ansible.builtin.include_tasks: export.yml
+  rescue:
+    - name: Log export non-fatal completion
+      ansible.builtin.debug:
+        msg: >-
+          Export reported errors (common: YAML formatting on job templates with Jinja extra_vars).
+          Continuing post-process on {{ caac_output_dir }}/.raw_export
+
+- name: Post-process flattened export into dispatch-ready configs
+  ansible.builtin.include_tasks: post_process_flatten.yml
+
+- name: Apply migration transforms for cross-version targets
+  ansible.builtin.include_tasks: migration_transform.yml
+
+- name: Generate runnable output artifacts
+  ansible.builtin.include_tasks: generate_output.yml
+
+- name: Display extraction summary
+  ansible.builtin.debug:
+    msg:
+      - "Extraction complete."
+      - "Source platform: {{ caac_source_platform_resolved }} -> Target: {{ caac_target_platform }}"
+      - "Output directory: {{ caac_output_dir }}"
+      - "Filters applied: {{ extract_filter }}"
+      - "input_tag: {{ resolved_input_tags | join(', ') }}"
+      - "Config files: {{ caac_config_file_count | default(0) }}"
+      - "Apply: cd {{ caac_output_dir }} && ../scripts/apply.sh --check"
+      - "Phased: ../scripts/apply.sh --phase projects,job_templates --check"

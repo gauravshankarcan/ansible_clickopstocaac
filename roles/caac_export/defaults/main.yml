@@ -1,0 +1,171 @@
+---
+# defaults file for caac_export
+
+extract_filter: all
+
+# Source platform: awx20 | awx24 | aap24 | aap25 | aap26 | aap27 | auto
+caac_source_platform: "{{ lookup('env', 'CAAC_SOURCE_PLATFORM') | default('aap25', true) }}"
+caac_target_platform: "{{ lookup('env', 'CAAC_TARGET_PLATFORM') | default('aap27', true) }}"
+caac_migration_mode: "{{ lookup('env', 'CAAC_MIGRATION_MODE') | default('false', true) | bool }}"
+
+# Connection — SOURCE_* preferred for extract; falls back to AAP_* / CONTROLLER_*
+source_aap_hostname_raw: >-
+  {{
+    lookup('env', 'SOURCE_AAP_URL')
+    | default(lookup('env', 'AAP_URL'), true)
+    | default(lookup('env', 'AAP_BASE'), true)
+    | default(lookup('env', 'CONTROLLER_HOST'), true)
+  }}
+source_aap_hostname: "{{ source_aap_hostname_raw | regex_replace('^https?://', '') | regex_replace('/$', '') }}"
+source_aap_username: >-
+  {{
+    lookup('env', 'SOURCE_AAP_USER')
+    | default(lookup('env', 'AAP_USER'), true)
+    | default(lookup('env', 'CONTROLLER_USERNAME'), true)
+  }}
+source_aap_password: >-
+  {{
+    lookup('env', 'SOURCE_AAP_PASS')
+    | default(lookup('env', 'AAP_PASS'), true)
+    | default(lookup('env', 'CONTROLLER_PASSWORD'), true)
+  }}
+source_aap_token: >-
+  {{
+    lookup('env', 'SOURCE_AAP_TOKEN')
+    | default(lookup('env', 'AAP_TOKEN'), true)
+  }}
+source_aap_validate_certs: "{{ lookup('env', 'SOURCE_AAP_VALIDATE_CERTS') | default(lookup('env', 'AAP_VALIDATE_CERTS'), true) | default('false', true) | bool }}"
+
+# Active connection aliases used by export tasks
+aap_hostname: "{{ source_aap_hostname }}"
+aap_username: "{{ source_aap_username }}"
+aap_password: "{{ source_aap_password }}"
+aap_token: "{{ source_aap_token }}"
+aap_validate_certs: "{{ source_aap_validate_certs }}"
+
+caac_output_base: "{{ playbook_dir }}/../output"
+caac_output_dir: ""
+
+# Resolved at runtime from source platform profile
+caac_extractor_role: ""
+caac_auth_mode: ""
+caac_token_path: ""
+caac_api_plugin: ""
+caac_use_legacy_extractor: false
+caac_use_legacy_filters: false
+
+# filetree_create options
+filetree_flatten_output: true
+filetree_secrets_as_variables: true
+filetree_secrets_prefix: vaulted
+filetree_omit_id: true
+filetree_skip_inventory_sources: false
+filetree_skip_inventory_hosts: false
+filetree_skip_inventory_groups: false
+
+# Migration transform knobs
+caac_migration_remap_legacy_vars: true
+caac_migration_format_for_gateway: "{{ lookup('env', 'CAAC_FORMAT_FOR_GATEWAY') | default('true', true) | bool }}"
+caac_migration_default_ee: "{{ lookup('env', 'CAAC_DEFAULT_EE') | default('', true) }}"
+caac_migration_org_map: {}
+caac_migration_credential_map: {}
+caac_migration_scm_url_map: {}
+caac_migration_strip_fields:
+  - id
+  - url
+  - related
+  - summary_fields
+  - created
+  - modified
+  - type
+  - custom_virtualenv
+
+caac_migration_exclude_on_apply:
+  - controller_inventory_source_update
+  - hub_namespace
+  - hub_ee_registry
+  - hub_ee_repository
+  - hub_ee_repository_sync
+  - hub_ee_image
+  - hub_ee_registry_index
+  - hub_ee_registry_sync
+  - hub_collection_remote
+  - hub_collection_repository
+  - hub_collection_repository_sync
+  - hub_collection
+  - hub_publish
+
+# Extra excludes when migrating from pre-gateway sources (AWX / AAP <=2.4)
+caac_migration_legacy_apply_excludes:
+  - gateway_authenticators
+  - gateway_authenticator_maps
+  - gateway_settings
+  - gateway_http_ports
+  - gateway_service_clusters
+  - gateway_service_keys
+  - gateway_service_nodes
+  - gateway_services
+  - gateway_routes
+  - gateway_role_definitions
+  - gateway_role_user_assignments
+  - gateway_role_team_assignments
+  - eda_credential_types
+  - eda_credentials
+  - eda_controller_tokens
+  - eda_projects
+  - eda_event_streams
+  - eda_decision_environments
+  - eda_rulebook_activations
+
+# Map raw export top-level keys to infra.aap_configuration.dispatch variable names.
+caac_var_key_renames:
+  gateway_organizations: aap_organizations
+  controller_organizations: aap_organizations
+  organizations: aap_organizations
+  teams: aap_teams
+  users: aap_user_accounts
+  user_accounts: aap_user_accounts
+  applications: aap_applications
+  job_templates: controller_templates
+  workflow_job_templates: controller_workflows
+  notification_templates: controller_notifications
+  groups: controller_groups
+  hosts: controller_hosts
+
+caac_file_renames:
+  controller_job_templates.yaml: controller_templates.yml
+  controller_job_templates.yml: controller_templates.yml
+  job_templates.yaml: controller_templates.yml
+  job_templates.yml: controller_templates.yml
+  controller_workflow_job_templates.yaml: controller_workflows.yml
+  controller_workflow_job_templates.yml: controller_workflows.yml
+  workflow_job_templates.yaml: controller_workflows.yml
+  workflow_job_templates.yml: controller_workflows.yml
+  controller_notification_templates.yaml: controller_notifications.yml
+  controller_notification_templates.yml: controller_notifications.yml
+  notification_templates.yaml: controller_notifications.yml
+  notification_templates.yml: controller_notifications.yml
+  gateway_organizations.yaml: aap_organizations.yml
+  gateway_organizations.yml: aap_organizations.yml
+  controller_organizations.yaml: aap_organizations.yml
+  controller_organizations.yml: aap_organizations.yml
+  organizations.yaml: aap_organizations.yml
+  organizations.yml: aap_organizations.yml
+  teams.yaml: aap_teams.yml
+  teams.yml: aap_teams.yml
+  users.yaml: aap_user_accounts.yml
+  users.yml: aap_user_accounts.yml
+  inventories.yaml: controller_inventories.yml
+  inventories.yml: controller_inventories.yml
+  inventory.yaml: controller_inventories.yml
+  inventory.yml: controller_inventories.yml
+  groups.yaml: controller_groups.yml
+  groups.yml: controller_groups.yml
+  hosts.yaml: controller_hosts.yml
+  hosts.yml: controller_hosts.yml
+
+caac_hub_patterns:
+  - hub_
+  - current_hub
+
+aap_configuration_dispatcher_exclude_roles: "{{ caac_migration_exclude_on_apply }}"

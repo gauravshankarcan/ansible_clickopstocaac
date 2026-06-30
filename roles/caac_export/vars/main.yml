@@ -1,0 +1,350 @@
+---
+# User-friendly filter names mapped to filetree_create input_tag values.
+# Never use 'all' here — it also exports Hub when PAH is present.
+
+caac_filter_map:
+  all:
+    - controller
+    - gateway
+    - eda
+  admin:
+    - gateway
+  gateway:
+    - gateway
+  controller:
+    - controller
+  eda:
+    - eda
+  job_templates:
+    - controller_job_templates
+  workflow_job_templates:
+    - controller_workflow_job_templates
+  inventories:
+    - controller_inventories
+    - controller_inventory_sources
+    - controller_hosts
+    - controller_groups
+  inventory_sources:
+    - controller_inventory_sources
+  projects:
+    - controller_projects
+  credentials:
+    - controller_credentials
+    - controller_credential_types
+  credential_input_sources:
+    - controller_credential_input_sources
+  execution_environments:
+    - controller_execution_environments
+  schedules:
+    - controller_schedules
+  notifications:
+    - controller_notification_templates
+  settings:
+    - controller_settings
+    - gateway_settings
+  organizations:
+    - gateway_organizations
+    - controller_organizations
+  users:
+    - gateway_users
+  teams:
+    - gateway_teams
+  roles:
+    - gateway_role_definitions
+    - gateway_role_user_assignments
+    - controller_roles
+  labels:
+    - controller_labels
+  instances:
+    - controller_instances
+  instance_groups:
+    - controller_instance_groups
+  applications:
+    - gateway_applications
+    - controller_applications
+  authenticators:
+    - gateway_authenticators
+    - gateway_authenticator_maps
+  gateway_services:
+    - gateway_services
+    - gateway_service_clusters
+    - gateway_service_nodes
+    - gateway_service_keys
+    - gateway_http_ports
+    - gateway_routes
+  eda_projects:
+    - eda_projects
+  eda_rulebooks:
+    - eda_rulebook_activations
+  eda_credentials:
+    - eda_credentials
+    - eda_credential_types
+  eda_event_streams:
+    - eda_event_streams
+  eda_decision_environments:
+    - eda_decision_environments
+
+# Required by filetree_create when collection defaults are incomplete
+filetree_valid_tags:
+  - all
+  - controller
+  - controller_settings
+  - controller_credentials
+  - controller_credential_types
+  - controller_execution_environments
+  - controller_groups
+  - controller_hosts
+  - controller_inventories
+  - controller_inventory_sources
+  - controller_job_templates
+  - controller_notification_templates
+  - controller_organizations
+  - controller_projects
+  - controller_roles
+  - controller_teams
+  - controller_users
+  - controller_workflow_job_templates
+  - controller_instance_groups
+  - controller_instances
+  - controller_applications
+  - controller_labels
+  - controller_schedules
+  - gateway
+  - gateway_applications
+  - gateway_authenticator_maps
+  - gateway_authenticators
+  - gateway_http_ports
+  - gateway_organizations
+  - gateway_role_definitions
+  - gateway_role_user_assignments
+  - gateway_routes
+  - gateway_service_clusters
+  - gateway_service_keys
+  - gateway_service_nodes
+  - gateway_services
+  - gateway_settings
+  - gateway_teams
+  - gateway_users
+  - eda
+  - eda_credential_types
+  - eda_credentials
+  - eda_decision_environments
+  - eda_event_streams
+  - eda_projects
+  - eda_rulebook_activations
+  - hub
+  - hub_namespaces
+  - hub_collections
+  - hub_collection_remotes
+  - hub_collection_repositories
+  - hub_ee_registries
+  - hub_ee_repositories
+  - hub_ee_images
+caac_source_platform_profiles:
+  awx20:
+    extractor_role: infra.controller_configuration.filetree_create
+    auth_mode: controller_v2
+    token_path: /api/v2/tokens/
+    api_plugin: awx.awx.controller_api
+    use_legacy_filters: true
+    filter_all_key: legacy_controller_all
+    include_gateway: false
+    include_eda: false
+    include_hub: false
+  awx24:
+    extractor_role: infra.controller_configuration.filetree_create
+    auth_mode: controller_v2
+    token_path: /api/v2/tokens/
+    api_plugin: awx.awx.controller_api
+    use_legacy_filters: true
+    filter_all_key: legacy_controller_all
+    include_gateway: false
+    include_eda: false
+    include_hub: false
+  aap24:
+    extractor_role: infra.controller_configuration.filetree_create
+    auth_mode: controller_v2
+    token_path: /api/v2/tokens/
+    api_plugin: ansible.controller.controller_api
+    use_legacy_filters: true
+    filter_all_key: legacy_controller_all
+    include_gateway: false
+    include_eda: false
+    include_hub: false
+  aap25:
+    extractor_role: infra.aap_configuration_extended.filetree_create
+    auth_mode: gateway_oauth
+    token_path: /api/gateway/v1/tokens/
+    api_plugin: ansible.platform.gateway_api
+    use_legacy_filters: false
+    filter_all_key: all
+    include_gateway: true
+    include_eda: true
+    include_hub: false
+  aap26:
+    extractor_role: infra.aap_configuration_extended.filetree_create
+    auth_mode: gateway_oauth
+    token_path: /api/gateway/v1/tokens/
+    api_plugin: ansible.platform.gateway_api
+    use_legacy_filters: false
+    filter_all_key: all
+    include_gateway: true
+    include_eda: true
+    include_hub: false
+  aap27:
+    extractor_role: infra.aap_configuration_extended.filetree_create
+    auth_mode: gateway_oauth
+    token_path: /api/gateway/v1/tokens/
+    api_plugin: ansible.platform.gateway_api
+    use_legacy_filters: false
+    filter_all_key: all
+    include_gateway: true
+    include_eda: true
+    include_hub: false
+
+# Legacy filetree_create input_tag names (infra.controller_configuration)
+caac_filter_map_legacy:
+  legacy_controller_all:
+    - organizations
+    - projects
+    - job_templates
+    - workflow_job_templates
+    - inventory
+    - credentials
+    - credential_types
+    - notification_templates
+    - execution_environments
+    - schedules
+    - labels
+    - instance_groups
+    - users
+    - teams
+    - roles
+  all:
+    - organizations
+    - projects
+    - job_templates
+    - workflow_job_templates
+    - inventory
+    - credentials
+    - credential_types
+    - notification_templates
+    - execution_environments
+    - schedules
+    - labels
+    - instance_groups
+    - users
+    - teams
+    - roles
+  controller:
+    - organizations
+    - projects
+    - job_templates
+    - workflow_job_templates
+    - inventory
+    - credentials
+    - credential_types
+    - notification_templates
+    - execution_environments
+    - schedules
+    - labels
+    - instance_groups
+    - users
+    - teams
+    - roles
+  admin:
+    - organizations
+    - users
+    - teams
+    - roles
+  gateway:
+    - organizations
+    - users
+    - teams
+    - roles
+  eda: []
+  job_templates:
+    - job_templates
+  workflow_job_templates:
+    - workflow_job_templates
+  inventories:
+    - inventory
+  inventory_sources:
+    - inventory
+  projects:
+    - projects
+  credentials:
+    - credentials
+    - credential_types
+  credential_input_sources:
+    - credentials
+  execution_environments:
+    - execution_environments
+  schedules:
+    - schedules
+  notifications:
+    - notification_templates
+  settings:
+    - settings
+  organizations:
+    - organizations
+  users:
+    - users
+  teams:
+    - teams
+  roles:
+    - roles
+  labels:
+    - labels
+  instances: []
+  instance_groups:
+    - instance_groups
+  applications:
+    - applications
+  authenticators: []
+  gateway_services: []
+  eda_projects: []
+  eda_rulebooks: []
+  eda_credentials: []
+  eda_event_streams: []
+  eda_decision_environments: []
+
+caac_legacy_valid_tags:
+  - all
+  - labels
+  - applications
+  - instance_groups
+  - settings
+  - inventory
+  - credentials
+  - credential_types
+  - notification_templates
+  - users
+  - teams
+  - roles
+  - organizations
+  - projects
+  - execution_environments
+  - job_templates
+  - workflow_job_templates
+  - workflow_job_template_nodes
+  - schedules
+
+# Apply phase -> ansible dispatch tags
+caac_apply_phase_tags:
+  all: []
+  gateway_orgs: organizations
+  organizations: organizations
+  credential_types: credential_types
+  credentials: credentials
+  projects: projects
+  inventories: inventories
+  job_templates: job_templates
+  workflow_job_templates: workflow_job_templates
+  schedules: schedules
+  rbac: organizations,users,teams,roles
+  users: users
+  teams: teams
+  roles: roles
+  eda: credential_type,credential,project,decision_environment,event_stream,rulebook_activation
+  controller: settings,labels,credential_types,credentials,projects,inventories,job_templates,workflow_job_templates,schedules

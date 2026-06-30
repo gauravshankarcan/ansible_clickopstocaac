@@ -1,0 +1,7 @@
+---
+- name: Extract AAP configuration to config-as-code
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - role: caac_export

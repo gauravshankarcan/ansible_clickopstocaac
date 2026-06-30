@@ -1,0 +1,53 @@
+---
+- name: Normalize source platform identifier
+  ansible.builtin.set_fact:
+    caac_source_platform_resolved: "{{ caac_source_platform | string | lower | trim }}"
+
+- name: Default auto source platform to aap25
+  ansible.builtin.set_fact:
+    caac_source_platform_resolved: aap25
+  when: caac_source_platform_resolved in ['auto', '']
+
+- name: Validate source platform
+  ansible.builtin.assert:
+    that:
+      - caac_source_platform_resolved in caac_source_platform_profiles
+    fail_msg: >-
+      Unknown caac_source_platform '{{ caac_source_platform_resolved }}'.
+      Valid: {{ caac_source_platform_profiles.keys() | list | join(', ') }}, auto
+
+- name: Load source platform profile
+  ansible.builtin.set_fact:
+    caac_platform_profile: "{{ caac_source_platform_profiles[caac_source_platform_resolved] }}"
+
+- name: Apply platform profile settings
+  ansible.builtin.set_fact:
+    caac_extractor_role: "{{ caac_platform_profile.extractor_role }}"
+    caac_auth_mode: "{{ caac_platform_profile.auth_mode }}"
+    caac_token_path: "{{ caac_platform_profile.token_path }}"
+    caac_api_plugin: "{{ caac_platform_profile.api_plugin }}"
+    caac_use_legacy_extractor: "{{ caac_platform_profile.extractor_role == 'infra.controller_configuration.filetree_create' }}"
+    caac_use_legacy_filters: "{{ caac_platform_profile.use_legacy_filters }}"
+    caac_source_include_gateway: "{{ caac_platform_profile.include_gateway }}"
+    caac_source_include_eda: "{{ caac_platform_profile.include_eda }}"
+    caac_source_include_hub: "{{ caac_platform_profile.include_hub }}"
+
+- name: Build apply exclude list for migration bundles
+  ansible.builtin.set_fact:
+    caac_apply_exclude_roles: >-
+      {{
+        caac_migration_exclude_on_apply
+        + (caac_migration_legacy_apply_excludes if not caac_source_include_gateway else [])
+        + (caac_migration_legacy_apply_excludes | select('match', '^eda_') | list if not caac_source_include_eda else [])
+      }}
+
+- name: Show resolved source platform profile
+  ansible.builtin.debug:
+    msg:
+      - "Source platform: {{ caac_source_platform_resolved }}"
+      - "Target platform: {{ caac_target_platform }}"
+      - "Migration mode: {{ caac_migration_mode }}"
+      - "Extractor: {{ caac_extractor_role }}"
+      - "Auth: {{ caac_auth_mode }} via {{ caac_token_path }}"
+      - "API plugin: {{ caac_api_plugin }}"
+      - "Legacy filters: {{ caac_use_legacy_filters }}"
